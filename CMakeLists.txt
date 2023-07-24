@@ -14,7 +14,10 @@ cmake_minimum_required(VERSION 3.15)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(AUDIO_PLUGIN_EXAMPLE VERSION 0.0.1)
+project(DELAY_THING VERSION 0.0.1)
+
+# Set the name of the plugin
+set(PROJECT_NAME "DelayThing")
 
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
@@ -23,7 +26,7 @@ project(AUDIO_PLUGIN_EXAMPLE VERSION 0.0.1)
 
 # find_package(JUCE CONFIG REQUIRED)        # If you've installed JUCE to your system
 # or
-# add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
+add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
 # If you are building a VST2 or AAX plugin, CMake needs to be told where to find these SDKs on your
 # system. This setup should be done before calling `juce_add_plugin`.
@@ -32,12 +35,12 @@ project(AUDIO_PLUGIN_EXAMPLE VERSION 0.0.1)
 # juce_set_aax_sdk_path(...)
 
 # `juce_add_plugin` adds a static library target with the name passed as the first argument
-# (AudioPluginExample here). This target is a normal CMake target, but has a lot of extra properties set
+# (DelayThing here). This target is a normal CMake target, but has a lot of extra properties set
 # up by default. As well as this shared code static library, this function adds targets for each of
 # the formats specified by the FORMATS arguments. This function accepts many optional arguments.
 # Check the readme at `docs/CMake API.md` in the JUCE repo for the full list.
 
-juce_add_plugin(AudioPluginExample
+juce_add_plugin("${PROJECT_NAME}"
     # VERSION ...                               # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
@@ -48,11 +51,11 @@ juce_add_plugin(AudioPluginExample
     # IS_MIDI_EFFECT TRUE/FALSE                 # Is this plugin a MIDI effect?
     # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard focus?
     # COPY_PLUGIN_AFTER_BUILD TRUE/FALSE        # Should the plugin be installed to a default location after building?
-    PLUGIN_MANUFACTURER_CODE Juce               # A four-character manufacturer id with at least one upper-case character
+    PLUGIN_MANUFACTURER_CODE Dejn               # A four-character manufacturer id with at least one upper-case character
     PLUGIN_CODE Dem0                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
     FORMATS AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-    PRODUCT_NAME "Audio Plugin Example")        # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME "Delay Thing")                 # The name of the final executable, which can differ from the target name
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
@@ -60,17 +63,21 @@ juce_add_plugin(AudioPluginExample
 # include all your JUCE module headers; if you're happy to include module headers directly, you
 # probably don't need to call this.
 
-# juce_generate_juce_header(AudioPluginExample)
+# juce_generate_juce_header(DelayThing)
 
 # `target_sources` adds source files to a target. We pass the target that needs the sources as the
 # first argument, then a visibility parameter for the sources which should normally be PRIVATE.
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
+set(SourceFiles
+    Source/PluginEditor.h
+    Source/PluginProcessor.h
+    Source/PluginEditor.cpp
+    Source/PluginProcessor.cpp)
 
-target_sources(AudioPluginExample
+target_sources("${PROJECT_NAME}"
     PRIVATE
-        PluginEditor.cpp
-        PluginProcessor.cpp)
+        ${SourceFiles})
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -79,7 +86,7 @@ target_sources(AudioPluginExample
 # definitions will be visible both to your code, and also the JUCE module code, so for new
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
-target_compile_definitions(AudioPluginExample
+target_compile_definitions("${PROJECT_NAME}"
     PUBLIC
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
@@ -101,11 +108,65 @@ target_compile_definitions(AudioPluginExample
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
 
-target_link_libraries(AudioPluginExample
+target_link_libraries("${PROJECT_NAME}"
     PRIVATE
-        # AudioPluginData           # If we'd created a binary data target, we'd link to it here
+        # DelayThingData          # If we'd created a binary data target, we'd link to it here
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Required for ctest (which is just easier for cross-platform CI)
+# include(CTest) does this too, but adds tons of targets we don't want
+# See: https://github.com/catchorg/Catch2/issues/2026
+# You also could forgo ctest and call ./Tests directly from the build dir
+enable_testing()
+
+# "GLOBS ARE BAD" is brittle and silly dev UX, sorry CMake!
+# CONFIGURE_DEPENDS / Clion's CMake integration makes globbing absolutely fine
+file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.h")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Tests PREFIX "" FILES ${TestFiles})
+
+# Use Catch2 v3 on the devel branch
+Include(FetchContent)
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+        GIT_TAG v3.3.2)
+FetchContent_MakeAvailable(Catch2) # find_package equivalent
+# Setup the test executable, again C++ 20 please
+add_executable(Tests ${TestFiles})
+target_compile_features(Tests PRIVATE cxx_std_20)
+
+# Our test executable also wants to know about our plugin code...
+target_include_directories(Tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain "${PROJECT_NAME}")
+
+# We can't link again to the shared juce target without ODL violations
+# However, we can steal its include dirs and compile definitions to use in tests!
+# https://forum.juce.com/t/windows-linker-issue-on-develop/55524/2
+target_compile_definitions(Tests PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
+target_include_directories(Tests PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
+
+
+# Make an Xcode Scheme for the test executable so we can run tests in the IDE
+set_target_properties(Tests PROPERTIES XCODE_GENERATE_SCHEME ON)
+
+# Organize the test source in the Tests/ folder in the IDE
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Tests PREFIX "" FILES ${TestFiles})
+
+# Load and use the .cmake file provided by Catch2
+# https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
+# We have to manually provide the source directory here for now
+include(${Catch2_SOURCE_DIR}/extras/Catch.cmake)
+catch_discover_tests(Tests)
+
+# Color our warnings and errors
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fcolor-diagnostics)
+endif ()
