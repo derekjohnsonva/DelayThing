@@ -76,6 +76,28 @@ const juce::String DelayThing::getProgramName(int index)
     return {};
 }
 
+int DelayThing::setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples)
+{
+    // set the buffer and return the old buffer size
+    int oldDelayBufferSizeInSamples = delayBufferSizeInSamples;
+    delayBufferSizeInSamples = newDelayBufferSizeInSamples;
+    return oldDelayBufferSizeInSamples;
+}
+int DelayThing::getDelayBufferSizeInSamples() const
+{
+    return delayBufferSizeInSamples;
+}
+
+void DelayThing::setDelayBufferSize(int numChannels, int numSamples)
+{
+    delayBuffer.setSize(numChannels, numSamples);
+}
+
+juce::AudioBuffer<float> DelayThing::getDelayBuffer() const
+{
+    return delayBuffer;
+}
+
 void DelayThing::changeProgramName(int index, const juce::String &newName)
 {
     juce::ignoreUnused(index, newName);
@@ -189,6 +211,8 @@ void DelayThing::writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer,
 
 void DelayThing::addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition)
 {
+    // Throw an error if the size of the delayBufferSizeInSamples is smaller that the outputBuffer
+    jassert(delayBufferSizeInSamples >= outputBuffer.getNumSamples());
     // check to see if when we read from the delay buffer we will be reading past the end
     // of the buffer
     // if we are, we need to wrap around to the beginning of the buffer

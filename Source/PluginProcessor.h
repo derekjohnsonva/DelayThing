@@ -41,6 +41,13 @@ public:
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
+    void writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer, int channel, int writePosition);
+    void addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition);
+    int setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples);
+    int getDelayBufferSizeInSamples() const;
+    juce::AudioBuffer<float> getDelayBuffer() const;
+    // setDelayBufferSize using channels and samples
+    void setDelayBufferSize(int numChannels, int numSamples);
 
 private:
     //==============================================================================
@@ -48,7 +55,4 @@ private:
     juce::AudioBuffer<float> delayBuffer;
     int delayBufferSizeInSamples = 0;
     int delayBufferWritePosition = 0;
-
-    void writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer, int channel, int writePosition);
-    void addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition);
 };
