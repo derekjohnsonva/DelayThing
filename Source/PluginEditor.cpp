@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-DelayThingEditor::DelayThingEditor (DelayThing& p)
+DelayThingEditor::DelayThingEditor (DelayThingAudioProcessor& p)
         : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);

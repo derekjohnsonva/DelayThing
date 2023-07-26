@@ -6,7 +6,7 @@
 
 TEST_CASE("writeToDelayBuffer writes samples to delay buffer", "[DelayThing]")
 {
-    DelayThing delayThing;
+    DelayThingAudioProcessor delayThing;
     const int channel = 0;
     const int writePosition = 0;
     const int numSamples = 10;
@@ -39,7 +39,7 @@ TEST_CASE("writeToDelayBuffer writes samples to delay buffer", "[DelayThing]")
 
 TEST_CASE("addFromDelayBuffer reads samples from delay buffer", "[DelayThing]")
 {
-    DelayThing delayThing;
+    DelayThingAudioProcessor delayThing;
     const int channel = 0;
     const int numSamples = 10;
     const int delayBufferSizeInSamples = 15;
@@ -56,14 +56,13 @@ TEST_CASE("addFromDelayBuffer reads samples from delay buffer", "[DelayThing]")
     // make the delayBuffer have all twos
     for (int i = 0; i < delayBufferSizeInSamples; ++i)
     {
-        delayThing.getDelayBuffer().setSample(channel, i, 2);
+        delayThing.setDelayBufferSample(channel, i, 2.0f);
     }
-    delayThing.addFromDelayBuffer(outputBuffer, channel, 0);
+    delayThing.addFromDelayBuffer(outputBuffer, channel, delayBufferSizeInSamples - 1);
     // check to make sure that the buffer has the correct values
     for (int i = 0; i < numSamples; ++i)
     {
         // print the value of the sample
-        std::cout << outputBuffer.getSample(channel, i) << std::endl;
         REQUIRE(outputBuffer.getSample(channel, i) == 3);
     }
 }

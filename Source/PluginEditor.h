@@ -6,7 +6,7 @@
 class DelayThingEditor : public juce::AudioProcessorEditor
 {
 public:
-    explicit DelayThingEditor(DelayThing &);
+    explicit DelayThingEditor(DelayThingAudioProcessor &);
     ~DelayThingEditor() override;
 
     //==============================================================================
@@ -16,7 +16,7 @@ public:
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
-    DelayThing &processorRef;
+    DelayThingAudioProcessor &processorRef;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingEditor)
 };

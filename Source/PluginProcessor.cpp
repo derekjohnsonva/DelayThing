@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-DelayThing::DelayThing()
+DelayThingAudioProcessor::DelayThingAudioProcessor()
     : AudioProcessor(BusesProperties()
 #if !JucePlugin_IsMidiEffect
 #if !JucePlugin_IsSynth
@@ -14,15 +14,15 @@ DelayThing::DelayThing()
 {
 }
 
-DelayThing::~DelayThing() = default;
+DelayThingAudioProcessor::~DelayThingAudioProcessor() = default;
 
 //==============================================================================
-const juce::String DelayThing::getName() const
+const juce::String DelayThingAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool DelayThing::acceptsMidi() const
+bool DelayThingAudioProcessor::acceptsMidi() const
 {
 #if JucePlugin_WantsMidiInput
     return true;
@@ -31,7 +31,7 @@ bool DelayThing::acceptsMidi() const
 #endif
 }
 
-bool DelayThing::producesMidi() const
+bool DelayThingAudioProcessor::producesMidi() const
 {
 #if JucePlugin_ProducesMidiOutput
     return true;
@@ -40,7 +40,7 @@ bool DelayThing::producesMidi() const
 #endif
 }
 
-bool DelayThing::isMidiEffect() const
+bool DelayThingAudioProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
     return true;
@@ -49,62 +49,67 @@ bool DelayThing::isMidiEffect() const
 #endif
 }
 
-double DelayThing::getTailLengthSeconds() const
+double DelayThingAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int DelayThing::getNumPrograms()
+int DelayThingAudioProcessor::getNumPrograms()
 {
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
     // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int DelayThing::getCurrentProgram()
+int DelayThingAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void DelayThing::setCurrentProgram(int index)
+void DelayThingAudioProcessor::setCurrentProgram(int index)
 {
     juce::ignoreUnused(index);
 }
 
-const juce::String DelayThing::getProgramName(int index)
+const juce::String DelayThingAudioProcessor::getProgramName(int index)
 {
     juce::ignoreUnused(index);
     return {};
 }
 
-int DelayThing::setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples)
+int DelayThingAudioProcessor::setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples)
 {
     // set the buffer and return the old buffer size
     int oldDelayBufferSizeInSamples = delayBufferSizeInSamples;
     delayBufferSizeInSamples = newDelayBufferSizeInSamples;
     return oldDelayBufferSizeInSamples;
 }
-int DelayThing::getDelayBufferSizeInSamples() const
+int DelayThingAudioProcessor::getDelayBufferSizeInSamples() const
 {
     return delayBufferSizeInSamples;
 }
 
-void DelayThing::setDelayBufferSize(int numChannels, int numSamples)
+void DelayThingAudioProcessor::setDelayBufferSize(int numChannels, int numSamples)
 {
     delayBuffer.setSize(numChannels, numSamples);
 }
 
-juce::AudioBuffer<float> DelayThing::getDelayBuffer() const
+void DelayThingAudioProcessor::setDelayBufferSample(int channel, int sample, float value)
+{
+    delayBuffer.setSample(channel, sample, value);
+}
+
+juce::AudioBuffer<float> DelayThingAudioProcessor::getDelayBuffer() const
 {
     return delayBuffer;
 }
 
-void DelayThing::changeProgramName(int index, const juce::String &newName)
+void DelayThingAudioProcessor::changeProgramName(int index, const juce::String &newName)
 {
     juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void DelayThing::prepareToPlay(double sampleRate, int samplesPerBlock)
+void DelayThingAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need
@@ -120,13 +125,13 @@ void DelayThing::prepareToPlay(double sampleRate, int samplesPerBlock)
     delayBufferSizeInSamples = (int)(0.25 * sampleRate);
 }
 
-void DelayThing::releaseResources()
+void DelayThingAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
 }
 
-bool DelayThing::isBusesLayoutSupported(const BusesLayout &layouts) const
+bool DelayThingAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
 #if JucePlugin_IsMidiEffect
     juce::ignoreUnused(layouts);
@@ -149,8 +154,8 @@ bool DelayThing::isBusesLayoutSupported(const BusesLayout &layouts) const
 #endif
 }
 
-void DelayThing::processBlock(juce::AudioBuffer<float> &buffer,
-                              juce::MidiBuffer &midiMessages)
+void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+                                            juce::MidiBuffer &midiMessages)
 {
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
@@ -173,6 +178,8 @@ void DelayThing::processBlock(juce::AudioBuffer<float> &buffer,
         // add the channel data to the delay buffer
         writeToDelayBuffer(buffer, channel, delayBufferWritePosition);
         delayBufferWritePosition += buffer.getNumSamples();
+        // Wrap the write position so that we don't get overflow
+        delayBufferWritePosition %= delayBufferSizeInSamples;
         // calculate the read position in the delay buffer
         int readPosition = delayBufferWritePosition - delayBufferSizeInSamples;
         // if the read position is negative, wrap it around to the end of the buffer
@@ -185,7 +192,7 @@ void DelayThing::processBlock(juce::AudioBuffer<float> &buffer,
     }
 }
 
-void DelayThing::writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer, int channel, int writePosition)
+void DelayThingAudioProcessor::writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer, int channel, int writePosition)
 {
     // check to see if when we write to the delay buffer we will be writing past the end
     // of the buffer
@@ -209,7 +216,7 @@ void DelayThing::writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer,
     }
 }
 
-void DelayThing::addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition)
+void DelayThingAudioProcessor::addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition)
 {
     // Throw an error if the size of the delayBufferSizeInSamples is smaller that the outputBuffer
     jassert(delayBufferSizeInSamples >= outputBuffer.getNumSamples());
@@ -231,23 +238,24 @@ void DelayThing::addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int 
     {
         // if we are not reading past the end of the buffer, just read the samples
         // from the buffer
+        // outputBuffer.addSample(channel, 0, delayBuffer.getSample(channel, readPosition));
         outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, outputBuffer.getNumSamples());
     }
 }
 
 //==============================================================================
-bool DelayThing::hasEditor() const
+bool DelayThingAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor *DelayThing::createEditor()
+juce::AudioProcessorEditor *DelayThingAudioProcessor::createEditor()
 {
     return new DelayThingEditor(*this);
 }
 
 //==============================================================================
-void DelayThing::getStateInformation(juce::MemoryBlock &destData)
+void DelayThingAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
@@ -255,7 +263,7 @@ void DelayThing::getStateInformation(juce::MemoryBlock &destData)
     juce::ignoreUnused(destData);
 }
 
-void DelayThing::setStateInformation(const void *data, int sizeInBytes)
+void DelayThingAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -266,5 +274,5 @@ void DelayThing::setStateInformation(const void *data, int sizeInBytes)
 // This creates new instances of the plugin..
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {
-    return new DelayThing();
+    return new DelayThingAudioProcessor();
 }

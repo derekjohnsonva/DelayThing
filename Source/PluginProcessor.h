@@ -3,12 +3,12 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 //==============================================================================
-class DelayThing : public juce::AudioProcessor
+class DelayThingAudioProcessor : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    DelayThing();
-    ~DelayThing() override;
+    DelayThingAudioProcessor();
+    ~DelayThingAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -45,13 +45,14 @@ public:
     void addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition);
     int setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples);
     int getDelayBufferSizeInSamples() const;
+    void setDelayBufferSample(int channel, int sample, float value);
     juce::AudioBuffer<float> getDelayBuffer() const;
     // setDelayBufferSize using channels and samples
     void setDelayBufferSize(int numChannels, int numSamples);
 
 private:
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThing)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingAudioProcessor)
     juce::AudioBuffer<float> delayBuffer;
     int delayBufferSizeInSamples = 0;
     int delayBufferWritePosition = 0;
