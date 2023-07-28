@@ -10,6 +10,8 @@ DelayThingEditor::DelayThingEditor(DelayThingAudioProcessor &p)
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     addAndMakeVisible(delayTimeSlider);
+    addAndMakeVisible(delayMixSlider);
+    addAndMakeVisible(delayRepsSlider);
     setSize(400, 300);
 }
 
@@ -32,5 +34,7 @@ void DelayThingEditor::resized()
     box.removeFromBottom(40);
 
     const auto width = box.getWidth();
-    delayTimeSlider.setBounds(box.removeFromLeft(width / 2).reduced(10));
+    delayTimeSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
+    delayMixSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
+    delayRepsSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
 }

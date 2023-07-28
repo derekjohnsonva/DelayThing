@@ -58,6 +58,8 @@ public:
 
     // The parameter name constants
     const juce::String delayTimeParamName = "delayTime";
+    const juce::String delayMixParamName = "delayMix";
+    const juce::String delayRepsParamName = "delayReps";
 
 private:
     //==============================================================================
@@ -73,4 +75,8 @@ private:
     juce::AudioProcessorValueTreeState parameters;
     // The delay time in milliseconds
     std::atomic<float> *delayTime = nullptr;
+    // The delay mix
+    std::atomic<float> *delayMix = nullptr;
+    // The number of times each delay is repeated
+    std::atomic<float> *delayReps = nullptr;
 };

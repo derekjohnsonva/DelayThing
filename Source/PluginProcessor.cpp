@@ -13,12 +13,22 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
                          ),
       parameters(*this, &undoManager, juce::Identifier("DelayThingParameters"),
                  {
-                     std::make_unique<juce::AudioParameterInt>(delayTimeParamName, "Delay Time", 10, 2000, 200),
+                     std::make_unique<juce::AudioParameterInt>(delayTimeParamName, "Time", 10, 2000, 200),
+                     std::make_unique<juce::AudioParameterFloat>(delayMixParamName, "Mix", 0.0f, 2.0f, 1.0f),
+                     std::make_unique<juce::AudioParameterInt>(delayRepsParamName, "Repetitions", 1, 5, 2),
                  })
 {
     delayTime = parameters.getRawParameterValue(delayTimeParamName);
     jassert(delayTime != nullptr);
-    parameters.addParameterListener("delayTime", this);
+    parameters.addParameterListener(delayTimeParamName, this);
+
+    delayMix = parameters.getRawParameterValue(delayMixParamName);
+    jassert(delayMix != nullptr);
+    parameters.addParameterListener(delayMixParamName, this);
+
+    delayReps = parameters.getRawParameterValue(delayRepsParamName);
+    jassert(delayReps != nullptr);
+    parameters.addParameterListener(delayRepsParamName, this);
 }
 
 DelayThingAudioProcessor::~DelayThingAudioProcessor() = default;
@@ -147,11 +157,16 @@ void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID,
 {
     if (parameterID == delayTimeParamName)
     {
-        // cast the new value to be an int
-        // convert newValue to an atomic<int> *
-
         *delayTime = newValue;
         updateDelayBufferSizeInSamples(*delayTime);
+    }
+    else if (parameterID == delayMixParamName)
+    {
+        *delayMix = newValue;
+    }
+    else if (parameterID == delayRepsParamName)
+    {
+        *delayReps = newValue;
     }
 }
 
@@ -271,18 +286,18 @@ void DelayThingAudioProcessor::addFromDelayBuffer(juce::AudioBuffer<float> &outp
         // calculate the number of samples we will read from the end of the buffer
         int numSamplesToEnd = delayBuffer.getNumSamples() - readPosition;
         // read the samples from the end of the buffer
-        outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, numSamplesToEnd);
+        outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, numSamplesToEnd, *delayMix);
         // calculate the number of samples we will read from the beginning of the buffer
         int numSamplesFromStart = outputBuffer.getNumSamples() - numSamplesToEnd;
         // read the samples from the beginning of the buffer
-        outputBuffer.addFrom(channel, numSamplesToEnd, delayBuffer, channel, 0, numSamplesFromStart);
+        outputBuffer.addFrom(channel, numSamplesToEnd, delayBuffer, channel, 0, numSamplesFromStart, *delayMix);
     }
     else
     {
         // if we are not reading past the end of the buffer, just read the samples
         // from the buffer
         // outputBuffer.addSample(channel, 0, delayBuffer.getSample(channel, readPosition));
-        outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, outputBuffer.getNumSamples());
+        outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, outputBuffer.getNumSamples(), *delayMix);
     }
 }
 

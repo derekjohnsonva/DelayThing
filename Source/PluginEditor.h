@@ -20,6 +20,10 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingEditor)
 
     juce::Slider delayTimeSlider{juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow};
+    juce::Slider delayMixSlider{juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow};
+    juce::Slider delayRepsSlider{juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow};
 
     juce::AudioProcessorValueTreeState::SliderAttachment delayTimeKnobAttachment{processorRef.getValueTreeState(), processorRef.delayTimeParamName, delayTimeSlider};
+    juce::AudioProcessorValueTreeState::SliderAttachment delayMixKnobAttachment{processorRef.getValueTreeState(), processorRef.delayMixParamName, delayMixSlider};
+    juce::AudioProcessorValueTreeState::SliderAttachment delayRepsKnobAttachment{processorRef.getValueTreeState(), processorRef.delayRepsParamName, delayRepsSlider};
 };
