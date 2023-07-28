@@ -3,7 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 //==============================================================================
-class DelayThingAudioProcessor : public juce::AudioProcessor
+class DelayThingAudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -50,10 +50,27 @@ public:
     // setDelayBufferSize using channels and samples
     void setDelayBufferSize(int numChannels, int numSamples);
 
+    // Listener for the parameters
+    void parameterChanged(const juce::String &parameterID, float newValue) override;
+
+    juce::AudioProcessorValueTreeState &getValueTreeState();
+    void DelayThingAudioProcessor::updateDelayBufferSizeInSamples(float delaySizeInMS);
+
+    // The parameter name constants
+    const juce::String delayTimeParamName = "delayTime";
+
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingAudioProcessor)
     juce::AudioBuffer<float> delayBuffer;
     int delayBufferSizeInSamples = 0;
-    int delayBufferWritePosition = 0;
+    // a vector of the last delay times in samples
+    std::vector<int> delayBufferWritePositions;
+
+    juce::UndoManager undoManager;
+
+    // Parameters for the plugin
+    juce::AudioProcessorValueTreeState parameters;
+    // The delay time in milliseconds
+    std::atomic<float> *delayTime = nullptr;
 };

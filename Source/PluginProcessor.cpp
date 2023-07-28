@@ -10,8 +10,15 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
 #endif
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-      )
+                         ),
+      parameters(*this, &undoManager, juce::Identifier("DelayThingParameters"),
+                 {
+                     std::make_unique<juce::AudioParameterInt>(delayTimeParamName, "Delay Time", 10, 2000, 200),
+                 })
 {
+    delayTime = parameters.getRawParameterValue(delayTimeParamName);
+    jassert(delayTime != nullptr);
+    parameters.addParameterListener("delayTime", this);
 }
 
 DelayThingAudioProcessor::~DelayThingAudioProcessor() = default;
@@ -108,21 +115,49 @@ void DelayThingAudioProcessor::changeProgramName(int index, const juce::String &
     juce::ignoreUnused(index, newName);
 }
 
+void DelayThingAudioProcessor::updateDelayBufferSizeInSamples(float delaySizeInMS)
+{
+    // calculate the new delay buffer size in samples
+    int newDelayBufferSizeInSamples = juce::roundToInt(delaySizeInMS * getSampleRate() / 1000.0);
+    // set the new delay buffer size in samples
+    setDelayBufferSizeInSamples(newDelayBufferSizeInSamples);
+}
+
 //==============================================================================
 void DelayThingAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
-
     // we will need our buffer to be able to hold 2 seconds of audio data
-    // First, get the number of samples in 2 seconds of audio
-    int numSamples = (int)(2.0 * sampleRate);
+    // First, get the number of samples in 2 seconds of audio (+ 2 blocks for safety)
+    int numSamples = (int)(2.0 * sampleRate) + (2 * samplesPerBlock);
     delayBuffer.setSize(getTotalNumOutputChannels(), numSamples);
+    delayBuffer.clear();
 
-    // TODO: make it so that the delay length can be changed
-    // For now, set delay to be 0.25 seconds
-    delayBufferSizeInSamples = (int)(0.25 * sampleRate);
+    // set the write head positions to zero for every input channel
+    delayBufferWritePositions.resize(getTotalNumInputChannels());
+    for (int i = 0; i < getTotalNumInputChannels(); ++i)
+    {
+        delayBufferWritePositions[i] = 0;
+    }
+
+    delayTime = parameters.getRawParameterValue(delayTimeParamName);
+    updateDelayBufferSizeInSamples(*delayTime);
+}
+
+void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue)
+{
+    if (parameterID == delayTimeParamName)
+    {
+        // cast the new value to be an int
+        // convert newValue to an atomic<int> *
+
+        *delayTime = newValue;
+        updateDelayBufferSizeInSamples(*delayTime);
+    }
+}
+
+juce::AudioProcessorValueTreeState &DelayThingAudioProcessor::getValueTreeState()
+{
+    return parameters;
 }
 
 void DelayThingAudioProcessor::releaseResources()
@@ -170,25 +205,31 @@ void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
+    // This is the main audio processing loop
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
+        // Throw an error if the size of the buffer is larger than the delayBufferSizeInSamples
+        jassert(buffer.getNumSamples() <= delayBufferSizeInSamples);
+
         // add the channel data to the delay buffer
-        writeToDelayBuffer(buffer, channel, delayBufferWritePosition);
-        delayBufferWritePosition += buffer.getNumSamples();
-        // Wrap the write position so that we don't get overflow
-        delayBufferWritePosition %= delayBufferSizeInSamples;
-        // calculate the read position in the delay buffer
-        int readPosition = delayBufferWritePosition - delayBufferSizeInSamples;
-        // if the read position is negative, wrap it around to the end of the buffer
+        writeToDelayBuffer(buffer, channel, delayBufferWritePositions[channel]);
+        jassert(delayBufferWritePositions[channel] >= 0 && delayBufferWritePositions[channel] < delayBuffer.getNumSamples());
+
+        // calculate the read position in the delay
+        // the read position is the oldest sample in the delay buffer.
+        int readPosition = delayBufferWritePositions[channel] - delayBufferSizeInSamples;
+        // // if the read position is negative, wrap it around to the end of the buffer
         if (readPosition < 0)
         {
-            readPosition += delayBufferSizeInSamples;
+            readPosition += delayBuffer.getNumSamples();
         }
+        //        jassert(readPosition >= 0 && readPosition < delayBufferSizeInSamples);
         // read from the delay buffer
         addFromDelayBuffer(buffer, channel, readPosition);
+
+        // Update the write positions
+        delayBufferWritePositions[channel] += buffer.getNumSamples();
+        delayBufferWritePositions[channel] %= delayBuffer.getNumSamples();
     }
 }
 
@@ -197,15 +238,17 @@ void DelayThingAudioProcessor::writeToDelayBuffer(const juce::AudioBuffer<float>
     // check to see if when we write to the delay buffer we will be writing past the end
     // of the buffer
     // if we are, we need to wrap around to the beginning of the buffer
-    if (writePosition + inputBuffer.getNumSamples() >= delayBufferSizeInSamples)
+    if (writePosition + inputBuffer.getNumSamples() >= delayBuffer.getNumSamples())
     {
         // calculate the number of samples we will write to the end of the buffer
-        int numSamplesToEnd = delayBufferSizeInSamples - writePosition;
+        int numSamplesToEnd = delayBuffer.getNumSamples() - writePosition;
         // write the samples to the end of the buffer
+        jassert(numSamplesToEnd >= 0);
         delayBuffer.copyFrom(channel, writePosition, inputBuffer, channel, 0, numSamplesToEnd);
         // calculate the number of samples we will write to the beginning of the buffer
         int numSamplesFromStart = inputBuffer.getNumSamples() - numSamplesToEnd;
         // write the samples to the beginning of the buffer
+        jassert(numSamplesFromStart >= 0);
         delayBuffer.copyFrom(channel, 0, inputBuffer, channel, numSamplesToEnd, numSamplesFromStart);
     }
     else
@@ -223,10 +266,10 @@ void DelayThingAudioProcessor::addFromDelayBuffer(juce::AudioBuffer<float> &outp
     // check to see if when we read from the delay buffer we will be reading past the end
     // of the buffer
     // if we are, we need to wrap around to the beginning of the buffer
-    if (readPosition + outputBuffer.getNumSamples() >= delayBufferSizeInSamples)
+    if (readPosition + outputBuffer.getNumSamples() >= delayBuffer.getNumSamples())
     {
         // calculate the number of samples we will read from the end of the buffer
-        int numSamplesToEnd = delayBufferSizeInSamples - readPosition;
+        int numSamplesToEnd = delayBuffer.getNumSamples() - readPosition;
         // read the samples from the end of the buffer
         outputBuffer.addFrom(channel, 0, delayBuffer, channel, readPosition, numSamplesToEnd);
         // calculate the number of samples we will read from the beginning of the buffer
