@@ -54,7 +54,7 @@ public:
     void parameterChanged(const juce::String &parameterID, float newValue) override;
 
     juce::AudioProcessorValueTreeState &getValueTreeState();
-    void DelayThingAudioProcessor::updateDelayBufferSizeInSamples(float delaySizeInMS);
+    void updateDelayBufferSizeInSamples(float delaySizeInMS);
 
     // The parameter name constants
     const juce::String delayTimeParamName = "delayTime";
