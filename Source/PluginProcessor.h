@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "DelayBuffer.h"
 
 //==============================================================================
 class DelayThingAudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorValueTreeState::Listener
@@ -41,20 +42,16 @@ public:
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
-    void writeToDelayBuffer(const juce::AudioBuffer<float> &inputBuffer, int channel, int writePosition);
-    void addFromDelayBuffer(juce::AudioBuffer<float> &outputBuffer, int channel, int readPosition);
-    int setDelayBufferSizeInSamples(int newDelayBufferSizeInSamples);
-    int getDelayBufferSizeInSamples() const;
-    void setDelayBufferSample(int channel, int sample, float value);
     juce::AudioBuffer<float> getDelayBuffer() const;
     // setDelayBufferSize using channels and samples
-    void setDelayBufferSize(int numChannels, int numSamples);
+    void setDelayBuffersSize(int numChannels, int numSamples);
 
     // Listener for the parameters
     void parameterChanged(const juce::String &parameterID, float newValue) override;
 
     juce::AudioProcessorValueTreeState &getValueTreeState();
     void updateDelayBufferSizeInSamples(float delaySizeInMS);
+    void setDelayBufferSize(int numChannels, int numSamples);
 
     // The parameter name constants
     const juce::String delayTimeParamName = "delayTime";
@@ -64,10 +61,9 @@ public:
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingAudioProcessor)
-    juce::AudioBuffer<float> delayBuffer;
+    std::vector<DelayBuffer> delayBuffers;
     int delayBufferSizeInSamples = 0;
-    // a vector of the last delay times in samples
-    std::vector<int> delayBufferWritePositions;
+    juce::Array<float> repGains;
 
     juce::UndoManager undoManager;
 
