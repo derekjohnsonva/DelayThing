@@ -18,7 +18,7 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
                      std::make_unique<juce::AudioParameterInt>(delayRepsParamName, "Repetitions", 1, 5, 2),
                  }),
       delayBuffers(2),
-      repGains(5, 1)
+      repGains()
 {
     delayTime = parameters.getRawParameterValue(delayTimeParamName);
     jassert(delayTime != nullptr);
@@ -130,6 +130,13 @@ void DelayThingAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
 
     delayTime = parameters.getRawParameterValue(delayTimeParamName);
     updateDelayBufferSizeInSamples(*delayTime);
+
+    // initialize the repGains
+    repGains.resize(*delayReps);
+    for (auto &repGain : repGains)
+    {
+        repGain = *delayMix;
+    }
 }
 
 void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue)
@@ -146,6 +153,11 @@ void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID,
     else if (parameterID == delayRepsParamName)
     {
         *delayReps = newValue;
+        repGains.resize(*delayReps);
+        for (auto &repGain : repGains)
+        {
+            repGain = *delayMix;
+        }
     }
 }
 
@@ -206,7 +218,7 @@ void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         jassert(buffer.getNumSamples() <= delayBufferSizeInSamples);
 
         // add the channel data to the delay buffer
-        delayBuffers[channel].writeFrom(buffer, channel, *delayReps);
+        delayBuffers[channel].writeFrom(buffer, channel);
         // read from the delay buffer
         delayBuffers[channel].addTo(buffer, channel, repGains, delayBufferSizeInSamples);
     }

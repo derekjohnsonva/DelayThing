@@ -13,7 +13,7 @@ struct DelaySample
     float sample;
     int reps;
     DelaySample() : sample(0), reps(0) {}
-    DelaySample(float sample, int reps) : sample(sample), reps(reps) {}
+    DelaySample(float sample) : sample(sample), reps(0) {}
     DelaySample(const DelaySample &other) = default;
     DelaySample &operator=(const DelaySample &other)
     {
@@ -24,9 +24,6 @@ struct DelaySample
         }
         return *this;
     }
-    int decrementReps(){
-        return reps--;
-    }
 };
 class DelayBuffer
 {
@@ -34,7 +31,7 @@ public:
     DelayBuffer();
     ~DelayBuffer();
     void setSize(int numSamples);
-    void writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel, int delaysPerSample);
+    void writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel);
     void addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, const  juce::Array<float>& repGains, int delaySizeInSamples);
 
 private:

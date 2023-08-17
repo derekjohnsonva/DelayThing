@@ -12,7 +12,7 @@ void DelayBuffer::setSize(int numSamples)
     writePosition = 0;
 }
 
-void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel, int delaysPerSample)
+void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel)
 {
     jassert(inputChannel >= 0 );
     // The way this works, is that we are writing to the delay buffer, which is a vector of juce::Arrays.
@@ -28,9 +28,10 @@ void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inp
         float inputSample = inputBuffer.getSample(inputChannel, sample);
         // get the delay buffer for the current sample
         juce::Array<DelaySample> &delayBufferForSample = delayBuffer[writePosition];
-        // update the write position
+        // update the write-position
         writePosition = (writePosition + 1) % delayBuffer.size();
-        delayBufferForSample.add(DelaySample(inputSample, delaysPerSample));
+        DelaySample ds = DelaySample(inputSample);
+        delayBufferForSample.add(ds);
     }
 }
 
@@ -51,12 +52,16 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
         // get the delay buffer for the current sample
         juce::Array<DelaySample> &delayBufferForSample = delayBuffer[readPosition];
         // iterate over the delay buffer for the current sample
-        for (DelaySample &delaySample : delayBufferForSample) {
-            outputSample += delaySample.sample * 1;
-            delaySample.reps--;
+        while (delayBufferForSample.size() > 0) {
+            auto delaySample = delayBufferForSample.removeAndReturn(0);
+            if (delaySample.reps < repGains.size()) {
+                outputSample += delaySample.sample * repGains[delaySample.reps];
+                // increment the number of repetitions
+                delaySample.reps++;
+                int wp = (writePosition + sample) % delayBuffer.size();
+                delayBuffer[wp].add(delaySample);
+            }
         }
-        delayBufferForSample.removeIf([](DelaySample &delaySample)
-                                      { return delaySample.reps <= 0; });
         outputBuffer.setSample(outputChannel, sample, outputSample);
     }
 }
