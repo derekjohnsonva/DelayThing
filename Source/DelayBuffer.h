@@ -32,7 +32,7 @@ public:
     ~DelayBuffer();
     void setSize(int numSamples);
     void writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel);
-    void addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, const  juce::Array<float>& repGains, int delaySizeInSamples);
+    void addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, int delaySizeInSamples);
 
 private:
     std::vector<juce::Array<DelaySample>> delayBuffer;

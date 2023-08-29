@@ -57,13 +57,21 @@ public:
     const juce::String delayTimeParamName = "delayTime";
     const juce::String delayMixParamName = "delayMix";
     const juce::String delayRepsParamName = "delayReps";
+    const int maxDelayReps = 5;
+    const juce::String delayRepGain1ParamName = "delayRepGain1";
+    const juce::String delayRepGain2ParamName = "delayRepGain2";
+    const juce::String delayRepGain3ParamName = "delayRepGain3";
+    const juce::String delayRepGain4ParamName = "delayRepGain4";
+    const juce::String delayRepGain5ParamName = "delayRepGain5";
+    // TODO: Decide if this makes sense for this to be public
+    // The number of times each delay is repeated
+    std::atomic<float> *delayReps = nullptr;
 
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingAudioProcessor)
     std::vector<DelayBuffer> delayBuffers;
     int delayBufferSizeInSamples = 0;
-    juce::Array<float> repGains;
 
     juce::UndoManager undoManager;
 
@@ -73,6 +81,6 @@ private:
     std::atomic<float> *delayTime = nullptr;
     // The delay mix
     std::atomic<float> *delayMix = nullptr;
-    // The number of times each delay is repeated
-    std::atomic<float> *delayReps = nullptr;
+    // An array of the repGains for each delay
+    juce::Array<std::atomic<float> *> repGains;
 };

@@ -12,6 +12,19 @@ DelayThingEditor::DelayThingEditor(DelayThingAudioProcessor &p)
     addAndMakeVisible(delayTimeSlider);
     addAndMakeVisible(delayMixSlider);
     addAndMakeVisible(delayRepsSlider);
+    for (auto slider : delayGainSliders)
+    {
+        addAndMakeVisible(*slider);
+    }
+    // int delayReps = static_cast<int>(*p.delayReps);
+    // for (int i = 0; i < delayReps; i++)
+    // {
+    //     addAndMakeVisible(*delayGainSliders[i]);
+    // }
+
+    // Start the timer
+    float fps = 24.f; // frames per second
+    startTimer(1000.f / fps);
     setSize(400, 300);
 }
 
@@ -34,7 +47,35 @@ void DelayThingEditor::resized()
     box.removeFromBottom(40);
 
     const auto width = box.getWidth();
-    delayTimeSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
-    delayMixSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
-    delayRepsSlider.setBounds(box.removeFromLeft(width / 3).reduced(10));
+    const auto height = box.getHeight();
+    auto knobsBox = box.removeFromTop(height / 2);
+    delayTimeSlider.setBounds(knobsBox.removeFromLeft(width / 3).reduced(10));
+    delayMixSlider.setBounds(knobsBox.removeFromLeft(width / 3).reduced(10));
+    delayRepsSlider.setBounds(knobsBox.removeFromLeft(width / 3).reduced(10));
+
+    auto slidersBox = box.removeFromTop(height / 2);
+    int delayReps = static_cast<int>(*processorRef.delayReps);
+    for (int i = 0; i < delayReps; i++)
+    {
+        (*delayGainSliders[i]).setBounds(slidersBox.removeFromLeft(width / delayReps).reduced(10));
+    }
+}
+
+void DelayThingEditor::timerCallback()
+{
+    int delayReps = static_cast<int>(*processorRef.delayReps);
+    if (delayReps != lastDelayRepsValue)
+    {
+        // Flag some of the delayReps as not visible
+        for (int i = 0; i < processorRef.maxDelayReps; i++)
+        {
+            if (i < delayReps) {
+                (*delayGainSliders[i]).setVisible(true);
+            } else {
+                (*delayGainSliders[i]).setVisible(false);
+            }
+        }
+        resized();
+        repaint();
+    }
 }

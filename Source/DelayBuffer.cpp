@@ -14,7 +14,7 @@ void DelayBuffer::setSize(int numSamples)
 
 void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel)
 {
-    jassert(inputChannel >= 0 );
+    jassert(inputChannel >= 0);
     // The way this works, is that we are writing to the delay buffer, which is a vector of juce::Arrays.
     // Each juce::Array represents the output for a sample.
     // Each entry in a juce::Array is a delayed sample with an associated delay number.
@@ -35,9 +35,9 @@ void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inp
     }
 }
 
-void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, const  juce::Array<float>& repGains, int delaySizeInSamples)
+void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, int delaySizeInSamples)
 {
-    jassert(outputChannel >= 0 );
+    jassert(outputChannel >= 0);
     // loop through all the samples in the outputBuffer
     for (int sample = 0; sample < outputBuffer.getNumSamples(); ++sample)
     {
@@ -52,10 +52,12 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
         // get the delay buffer for the current sample
         juce::Array<DelaySample> &delayBufferForSample = delayBuffer[readPosition];
         // iterate over the delay buffer for the current sample
-        while (delayBufferForSample.size() > 0) {
+        while (delayBufferForSample.size() > 0)
+        {
             auto delaySample = delayBufferForSample.removeAndReturn(0);
-            if (delaySample.reps < repGains.size()) {
-                outputSample += delaySample.sample * repGains[delaySample.reps];
+            if (delaySample.reps < delayReps)
+            {
+                outputSample += delaySample.sample * (*repGains[delaySample.reps]);
                 // increment the number of repetitions
                 delaySample.reps++;
                 int wp = (writePosition + sample) % delayBuffer.size();
@@ -66,5 +68,4 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
     }
 }
 
-DelayBuffer::~DelayBuffer()
-= default;
+DelayBuffer::~DelayBuffer() = default;

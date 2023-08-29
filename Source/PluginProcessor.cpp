@@ -16,10 +16,16 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
                      std::make_unique<juce::AudioParameterInt>(delayTimeParamName, "Time", 10, 2000, 200),
                      std::make_unique<juce::AudioParameterFloat>(delayMixParamName, "Mix", 0.0f, 2.0f, 1.0f),
                      std::make_unique<juce::AudioParameterInt>(delayRepsParamName, "Repetitions", 1, 5, 2),
+                     std::make_unique<juce::AudioParameterFloat>(delayRepGain1ParamName, "Rep 1 Gain", 0.0f, 2.0f, 0.5f),
+                     std::make_unique<juce::AudioParameterFloat>(delayRepGain2ParamName, "Rep 2 Gain", 0.0f, 2.0f, 0.5f),
+                     std::make_unique<juce::AudioParameterFloat>(delayRepGain3ParamName, "Rep 3 Gain", 0.0f, 2.0f, 0.5f),
+                     std::make_unique<juce::AudioParameterFloat>(delayRepGain4ParamName, "Rep 4 Gain", 0.0f, 2.0f, 0.5f),
+                     std::make_unique<juce::AudioParameterFloat>(delayRepGain5ParamName, "Rep 5 Gain", 0.0f, 2.0f, 0.5f),
                  }),
       delayBuffers(2),
       repGains()
 {
+
     delayTime = parameters.getRawParameterValue(delayTimeParamName);
     jassert(delayTime != nullptr);
     parameters.addParameterListener(delayTimeParamName, this);
@@ -31,6 +37,17 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
     delayReps = parameters.getRawParameterValue(delayRepsParamName);
     jassert(delayReps != nullptr);
     parameters.addParameterListener(delayRepsParamName, this);
+    // TODO: There is probably a cleaner way to do this
+    repGains.set(0, parameters.getRawParameterValue(delayRepGain1ParamName));
+    parameters.addParameterListener(delayRepGain1ParamName, this);
+    repGains.set(1, parameters.getRawParameterValue(delayRepGain2ParamName));
+    parameters.addParameterListener(delayRepGain1ParamName, this);
+    repGains.set(2, parameters.getRawParameterValue(delayRepGain3ParamName));
+    parameters.addParameterListener(delayRepGain1ParamName, this);
+    repGains.set(3, parameters.getRawParameterValue(delayRepGain4ParamName));
+    parameters.addParameterListener(delayRepGain1ParamName, this);
+    repGains.set(4, parameters.getRawParameterValue(delayRepGain5ParamName));
+    parameters.addParameterListener(delayRepGain1ParamName, this);
 }
 
 DelayThingAudioProcessor::~DelayThingAudioProcessor() = default;
@@ -132,11 +149,12 @@ void DelayThingAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     updateDelayBufferSizeInSamples(*delayTime);
 
     // initialize the repGains
-    repGains.resize(*delayReps);
-    for (auto &repGain : repGains)
-    {
-        repGain = *delayMix;
-    }
+    repGains.resize(maxDelayReps);
+    repGains.set(0, parameters.getRawParameterValue(delayRepGain1ParamName));
+    repGains.set(1, parameters.getRawParameterValue(delayRepGain2ParamName));
+    repGains.set(2, parameters.getRawParameterValue(delayRepGain3ParamName));
+    repGains.set(3, parameters.getRawParameterValue(delayRepGain4ParamName));
+    repGains.set(4, parameters.getRawParameterValue(delayRepGain5ParamName));
 }
 
 void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue)
@@ -153,11 +171,26 @@ void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID,
     else if (parameterID == delayRepsParamName)
     {
         *delayReps = newValue;
-        repGains.resize(*delayReps);
-        for (auto &repGain : repGains)
-        {
-            repGain = *delayMix;
-        }
+    }
+    else if (parameterID == delayRepGain1ParamName)
+    {
+        *repGains[0] = newValue;
+    }
+    else if (parameterID == delayRepGain2ParamName)
+    {
+        *repGains[1] = newValue;
+    }
+    else if (parameterID == delayRepGain3ParamName)
+    {
+        *repGains[2] = newValue;
+    }
+    else if (parameterID == delayRepGain4ParamName)
+    {
+        *repGains[3] = newValue;
+    }
+    else if (parameterID == delayRepGain5ParamName)
+    {
+        *repGains[4] = newValue;
     }
 }
 
@@ -220,7 +253,7 @@ void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         // add the channel data to the delay buffer
         delayBuffers[channel].writeFrom(buffer, channel);
         // read from the delay buffer
-        delayBuffers[channel].addTo(buffer, channel, repGains, delayBufferSizeInSamples);
+        delayBuffers[channel].addTo(buffer, channel, *delayReps, repGains, delayBufferSizeInSamples);
     }
 }
 
