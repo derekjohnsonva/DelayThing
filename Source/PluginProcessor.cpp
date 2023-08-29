@@ -133,7 +133,7 @@ void DelayThingAudioProcessor::updateDelayBufferSizeInSamples(float delaySizeInM
     // calculate the new delay buffer size in samples
     int newDelayBufferSizeInSamples = juce::roundToInt(delaySizeInMS * getSampleRate() / 1000.0);
     // set the new delay buffer size in samples
-    delayBufferSizeInSamples = newDelayBufferSizeInSamples;
+    delayBufferSizeInSamples.setTarget(newDelayBufferSizeInSamples);
 }
 
 //==============================================================================
@@ -248,8 +248,6 @@ void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         // Throw an error if the size of the buffer is larger than the delayBufferSizeInSamples
-        jassert(buffer.getNumSamples() <= delayBufferSizeInSamples);
-
         // add the channel data to the delay buffer
         delayBuffers[channel].writeFrom(buffer, channel);
         // read from the delay buffer

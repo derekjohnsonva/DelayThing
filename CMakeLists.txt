@@ -75,7 +75,8 @@ set(SourceFiles
     Source/PluginEditor.cpp
     Source/PluginProcessor.cpp
     Source/DelayBuffer.h
-    Source/DelayBuffer.cpp)
+    Source/DelayBuffer.cpp
+    Source/Utils.h)
 
 target_sources("${PROJECT_NAME}"
     PRIVATE
