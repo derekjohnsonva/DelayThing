@@ -1,4 +1,5 @@
 #include "DelayBuffer.h"
+#include "Utils.h"
 
 DelayBuffer::DelayBuffer()
     : delayBuffer(10, juce::Array<DelaySample>())
@@ -35,7 +36,7 @@ void DelayBuffer::writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inp
     }
 }
 
-void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, int delaySizeInSamples)
+void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, Smoother<float> &delaySizeInSamples)
 {
     jassert(outputChannel >= 0);
     // loop through all the samples in the outputBuffer
@@ -44,24 +45,44 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
         // get the output sample
         float outputSample = outputBuffer.getSample(outputChannel, sample);
         // get the read position
-        int readPosition = writePosition + sample - delaySizeInSamples;
+        float readPosition = writePosition + sample - delaySizeInSamples.getVal();
         if (readPosition < 0)
         {
             readPosition += delayBuffer.size();
         }
-        // get the delay buffer for the current sample
-        juce::Array<DelaySample> &delayBufferForSample = delayBuffer[readPosition];
+        readPosition = std::fmod(readPosition, delayBuffer.size());
+        // linear interpolation of the read position
+        const auto readPositionFloor = std::floor(readPosition);
+        auto rPF = static_cast<int>(readPositionFloor);
+        auto rPC = static_cast<int>(readPositionFloor + 1);
+        rPC = rPC % delayBuffer.size();
+        auto readPositionFraction = readPosition - readPositionFloor;
+        // juce::Array<DelaySample> &delayBufferForSample = delayBuffer[rPF] + readPositionFraction * (delayBuffer[rPC] - delayBuffer[rPF]);
+        juce::Array<DelaySample> &delayBufferForSampleF = delayBuffer[rPF];
+        juce::Array<DelaySample> &delayBufferForSampleC = delayBuffer[rPC];
         // iterate over the delay buffer for the current sample
-        while (delayBufferForSample.size() > 0)
+        int initialSize = delayBufferForSampleF.size();
+        for (int i = 0; i < initialSize; i++)
         {
-            auto delaySample = delayBufferForSample.removeAndReturn(0);
-            if (delaySample.reps < delayReps)
+            auto delaySampleF = delayBufferForSampleF.removeAndReturn(0);
+            if (delaySampleF.reps < delayReps)
             {
-                outputSample += delaySample.sample * (*repGains[delaySample.reps]);
+                float sampleAndGainF = delaySampleF.sample * (*repGains[delaySampleF.reps]);
+                outputSample += sampleAndGainF;
+                // Get the ceil Delay Sample
+                if (i < delayBufferForSampleC.size())
+                {
+                    auto delaySampleC = delayBufferForSampleC[i];
+                    if (delaySampleC.reps < delayReps)
+                    {
+                        float sampleAndGainC = delaySampleC.sample * (*repGains[delaySampleC.reps]);
+                        outputSample += readPositionFraction * (sampleAndGainC - sampleAndGainF);
+                    }
+                }
                 // increment the number of repetitions
-                delaySample.reps++;
+                delaySampleF.reps++;
                 int wp = (writePosition + sample) % delayBuffer.size();
-                delayBuffer[wp].add(delaySample);
+                delayBuffer[wp].add(delaySampleF);
             }
         }
         outputBuffer.setSample(outputChannel, sample, outputSample);

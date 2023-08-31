@@ -131,7 +131,7 @@ void DelayThingAudioProcessor::changeProgramName(int index, const juce::String &
 void DelayThingAudioProcessor::updateDelayBufferSizeInSamples(float delaySizeInMS)
 {
     // calculate the new delay buffer size in samples
-    int newDelayBufferSizeInSamples = juce::roundToInt(delaySizeInMS * getSampleRate() / 1000.0);
+    float newDelayBufferSizeInSamples = delaySizeInMS * (getSampleRate() / 1000.f);
     // set the new delay buffer size in samples
     delayBufferSizeInSamples.setTarget(newDelayBufferSizeInSamples);
 }
@@ -155,6 +155,8 @@ void DelayThingAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     repGains.set(2, parameters.getRawParameterValue(delayRepGain3ParamName));
     repGains.set(3, parameters.getRawParameterValue(delayRepGain4ParamName));
     repGains.set(4, parameters.getRawParameterValue(delayRepGain5ParamName));
+
+    delayBufferSizeInSamples.setDecay(0.02f, sampleRate);
 }
 
 void DelayThingAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue)

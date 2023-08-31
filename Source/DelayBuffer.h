@@ -7,6 +7,7 @@
 #pragma once
 #include <vector>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "Utils.h"
 
 struct DelaySample
 {
@@ -32,7 +33,7 @@ public:
     ~DelayBuffer();
     void setSize(int numSamples);
     void writeFrom(const juce::AudioBuffer<float> &inputBuffer, int inputChannel);
-    void addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, int delaySizeInSamples);
+    void addTo(juce::AudioBuffer<float> &outputBuffer, int outputChannel, int delayReps, const juce::Array<std::atomic<float> *> repGains, Smoother<float> &delaySizeInSamples);
 
 private:
     std::vector<juce::Array<DelaySample>> delayBuffer;

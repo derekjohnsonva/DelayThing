@@ -1,28 +1,40 @@
+#pragma once
+
 template <typename T>
 class Smoother
 {
 public:
-    Smoother(int numberOfSamples) : numberOfSamples(numberOfSamples) {}
+    Smoother(T decay) : decay(decay) {}
     void setTarget(T target)
     {
         targetValue = target;
     }
-    setValue(T value)
+    void setDecay(T delayHalfLife, float sampleRate)
+    {
+        this->decay = std::exp2(1 / (delayHalfLife * sampleRate));
+    }
+    void setValue(T value)
     {
         targetValue = value;
         value = value;
     }
     T getVal()
     {
+        // check to see if value and target are roughly the same
+        if (std::abs(value - targetValue) < error_tolerance)
+        {
+            return value;
+        }
         // Apply smoothing to the input value
-        auto inc = (targetValue - value) / numberOfSamples;
+        auto inc = (targetValue - value) * decay;
         value += inc;
         return value;
     }
 
 private:
     // How many samples it took to get to the target value
-    int numberOfSamples = 1;
+    T decay = 1;
+    float error_tolerance = 0.0001f;
     T value = 0.0f;
     T targetValue = 0.0f;
 };
