@@ -144,6 +144,11 @@ FetchContent_MakeAvailable(Catch2) # find_package equivalent
 add_executable(Tests ${TestFiles})
 target_compile_features(Tests PRIVATE cxx_std_20)
 
+# Add the Melatonin::Perfetto target to your project
+# https://github.com/sudara/melatonin_perfetto
+add_subdirectory (modules/melatonin_perfetto)
+target_link_libraries ("${PROJECT_NAME}" PRIVATE Melatonin::Perfetto)
+
 # Our test executable also wants to know about our plugin code...
 target_include_directories(Tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain "${PROJECT_NAME}")
