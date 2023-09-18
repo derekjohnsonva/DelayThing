@@ -4,7 +4,7 @@ template <typename T>
 class Smoother
 {
 public:
-    Smoother(T decay) : decay(decay) {}
+    Smoother(T decayValue) : decay(decayValue) {}
     void setTarget(T target)
     {
         targetValue = target;
@@ -13,11 +13,7 @@ public:
     {
         this->decay = std::exp2(1 / (delayHalfLife * sampleRate));
     }
-    void setValue(T value)
-    {
-        targetValue = value;
-        value = value;
-    }
+
     T getVal()
     {
         // check to see if value and target are roughly the same

@@ -12,6 +12,7 @@ DelayThingEditor::DelayThingEditor(DelayThingAudioProcessor &p)
     addAndMakeVisible(delayTimeSlider);
     addAndMakeVisible(delayMixSlider);
     addAndMakeVisible(delayRepsSlider);
+
     for (auto slider : delayGainSliders)
     {
         addAndMakeVisible(*slider);
@@ -24,7 +25,7 @@ DelayThingEditor::DelayThingEditor(DelayThingAudioProcessor &p)
 
     // Start the timer
     float fps = 24.f; // frames per second
-    startTimer(1000.f / fps);
+    startTimer(static_cast<int>(1000.f / fps));
     setSize(400, 300);
 }
 
@@ -69,9 +70,12 @@ void DelayThingEditor::timerCallback()
         // Flag some of the delayReps as not visible
         for (int i = 0; i < processorRef.maxDelayReps; i++)
         {
-            if (i < delayReps) {
+            if (i < delayReps)
+            {
                 (*delayGainSliders[i]).setVisible(true);
-            } else {
+            }
+            else
+            {
                 (*delayGainSliders[i]).setVisible(false);
             }
         }

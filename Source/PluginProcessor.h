@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <melatonin_perfetto/melatonin_perfetto.h>
 #include "DelayBuffer.h"
 #include "Utils.h"
 
@@ -72,10 +73,10 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DelayThingAudioProcessor)
     std::vector<DelayBuffer> delayBuffers;
-    // TODO: It would be good to change this to be a float. We would then do lerp to get the actual delay size in samples
-    //    int delayBufferSizeInSamples = 0;
-    Smoother<float> delayBufferSizeInSamples = Smoother<float>(.001);
-
+    Smoother<float> delayBufferSizeInSamples = Smoother<float>(0.001f);
+#if PERFETTO
+    std::unique_ptr<perfetto::TracingSession> tracingSession;
+#endif
     juce::UndoManager undoManager;
 
     // Parameters for the plugin

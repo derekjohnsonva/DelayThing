@@ -9,6 +9,7 @@ DelayBuffer::DelayBuffer()
 void DelayBuffer::setSize(int numSamples)
 {
     // resize the vector holding the juce::Array
+    jassert(numSamples >= 0);
     delayBuffer.resize(numSamples);
     writePosition = 0;
 }
@@ -45,7 +46,7 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
         // get the output sample
         float outputSample = outputBuffer.getSample(outputChannel, sample);
         // get the read position
-        float readPosition = writePosition + sample - delaySizeInSamples.getVal();
+        double readPosition = writePosition + sample - delaySizeInSamples.getVal();
         if (readPosition < 0)
         {
             readPosition += delayBuffer.size();
@@ -53,8 +54,8 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
         readPosition = std::fmod(readPosition, delayBuffer.size());
         // linear interpolation of the read position
         const auto readPositionFloor = std::floor(readPosition);
-        auto rPF = static_cast<int>(readPositionFloor);
-        auto rPC = static_cast<int>(readPositionFloor + 1);
+        auto rPF = static_cast<unsigned long>(readPositionFloor);
+        auto rPC = static_cast<unsigned long>(readPositionFloor + 1);
         rPC = rPC % delayBuffer.size();
         auto readPositionFraction = readPosition - readPositionFloor;
         // juce::Array<DelaySample> &delayBufferForSample = delayBuffer[rPF] + readPositionFraction * (delayBuffer[rPC] - delayBuffer[rPF]);
@@ -81,7 +82,7 @@ void DelayBuffer::addTo(juce::AudioBuffer<float> &outputBuffer, int outputChanne
                 }
                 // increment the number of repetitions
                 delaySampleF.reps++;
-                int wp = (writePosition + sample) % delayBuffer.size();
+                unsigned long wp = (writePosition + sample) % delayBuffer.size();
                 delayBuffer[wp].add(delaySampleF);
             }
         }

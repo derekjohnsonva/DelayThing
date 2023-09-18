@@ -11,6 +11,7 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
                          ),
+      delayBuffers(2),
       parameters(*this, &undoManager, juce::Identifier("DelayThingParameters"),
                  {
                      std::make_unique<juce::AudioParameterInt>(delayTimeParamName, "Time", 10, 2000, 200),
@@ -22,10 +23,11 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
                      std::make_unique<juce::AudioParameterFloat>(delayRepGain4ParamName, "Rep 4 Gain", 0.0f, 2.0f, 0.5f),
                      std::make_unique<juce::AudioParameterFloat>(delayRepGain5ParamName, "Rep 5 Gain", 0.0f, 2.0f, 0.5f),
                  }),
-      delayBuffers(2),
       repGains()
 {
-
+#if PERFETTO
+    MelatoninPerfetto::get().beginSession();
+#endif
     delayTime = parameters.getRawParameterValue(delayTimeParamName);
     jassert(delayTime != nullptr);
     parameters.addParameterListener(delayTimeParamName, this);
@@ -50,7 +52,12 @@ DelayThingAudioProcessor::DelayThingAudioProcessor()
     parameters.addParameterListener(delayRepGain1ParamName, this);
 }
 
-DelayThingAudioProcessor::~DelayThingAudioProcessor() = default;
+DelayThingAudioProcessor::~DelayThingAudioProcessor()
+{
+#if PERFETTO
+    MelatoninPerfetto::get().endSession();
+#endif
+};
 
 //==============================================================================
 const juce::String DelayThingAudioProcessor::getName() const
@@ -233,6 +240,7 @@ bool DelayThingAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts
 void DelayThingAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                             juce::MidiBuffer &midiMessages)
 {
+    TRACE_DSP();
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();

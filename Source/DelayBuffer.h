@@ -14,7 +14,7 @@ struct DelaySample
     float sample;
     int reps;
     DelaySample() : sample(0), reps(0) {}
-    DelaySample(float sample) : sample(sample), reps(0) {}
+    DelaySample(float sampleVal) : sample(sampleVal), reps(0) {}
     DelaySample(const DelaySample &other) = default;
     DelaySample &operator=(const DelaySample &other)
     {
